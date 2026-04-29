@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pesquisa de Satisfação - Gerabytez</title>
+    <style>
+        /* (Mantenha todo o CSS anterior aqui para poupar espaço) */
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f4f8; padding: 20px; }
+        .container { max-width: 750px; background: white; padding: 40px 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin: 0 auto; }
+        .cabecalho { text-align: center; margin-bottom: 30px; }
+        .logo { max-width: 100%; height: auto; max-height: 120px; margin: 0 auto 20px auto; display: block; }
+        .cabecalho h2 { color: #102542; font-size: 2em; margin: 0; }
+        .form-group { background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 30px; }
+        label.pergunta { font-weight: 600; display: block; margin-bottom: 12px; color: #102542; }
+        select { width: 100%; padding: 16px; border: 2px solid #cbd5e0; border-radius: 10px; font-size: 16px; }
+        details.quesito-card { background: #fff; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        summary { padding: 18px 20px; font-size: 1.25em; font-weight: bold; color: white; border-radius: 12px; cursor: pointer; list-style: none; display: flex; justify-content: space-between; }
+        .detalhes-conteudo { padding: 20px; border: 2px solid var(--cor-tema); border-top: none; border-radius: 0 0 12px 12px; }
+        .professor-linha { margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px dashed #e2e8f0; }
+        .professor-nome { font-weight: 600; margin-bottom: 12px; color: #102542; }
+        .opcoes-linha { display: flex; flex-wrap: wrap; gap: 8px; }
+        .opcao-wrapper { flex: 1; min-width: calc(20% - 8px); }
+        .opcao-wrapper input[type="radio"] { position: absolute; opacity: 0; width: 0; }
+        .opcao-label { display: block; text-align: center; padding: 12px 5px; background: #edf2f7; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: 0.2s; }
+        .opcao-wrapper input[type="radio"]:checked + .opcao-label { background-color: var(--cor-tema); color: white; }
+        button.enviar { width: 100%; background-color: #e57000; color: white; border: none; cursor: pointer; font-size: 1.2em; font-weight: bold; padding: 18px; border-radius: 12px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="cabecalho">
+        <img src="gerabytez.png" alt="Logo Gerabytez" class="logo">
+        <h2>Pesquisa de Satisfação</h2>
+        <p>Avalie os professores em cada quesito.</p>
+    </div>
+    
+    <form id="pesquisaForm" action="https://formsubmit.co/danilo.pro@gmail.com" method="POST">
+        <input type="hidden" name="_subject" value="Nova Avaliação Gerabytez">
+        <input type="hidden" name="_captcha" value="false">
+        <input type="hidden" name="_template" value="table"> <input type="hidden" id="jsonOutput" name="DADOS_JSON">
+
+        <div class="form-group">
+            <label for="turma" class="pergunta">1. Qual é a sua turma?</label>
+            <select id="turma" name="Turma" required>
+                <option value="">Selecione...</option>
+            </select>
+        </div>
+
+        <div id="lista-quesitos"></div>
+        <button type="submit" id="btn-enviar" class="enviar" style="display: none;">Enviar e Baixar Arquivo</button>
+    </form>
+</div>
+
+<script>
+    const configPesquisa = {
+        turmasEProfessores: {
+            "Turma A - 1º Ano": ["Prof. Carlos (Matemática)", "Profa. Ana (História)", "Prof. Marcos (Física)"],
+            "Turma B - 2º Ano": ["Profa. Julia (Biologia)", "Prof. Roberto (Geografia)"],
+            "Turma C - 3º Ano": ["Prof. Carlos (Matemática)", "Profa. Silvia (Química)", "Prof. Lima (Literatura)"]
+        },
+        quesitos: ["Didática", "Pontualidade", "Domínio do Assunto", "Clareza"],
+        opcoesNota: [
+            { valor: 1, rotulo: "1" }, { valor: 2, rotulo: "2" }, 
+            { valor: 3, rotulo: "3" }, { valor: 4, rotulo: "4" }, { valor: 5, rotulo: "5" }
+        ],
+        paletaCores: ['#102542', '#e57000', '#2a9d8f', '#d1495b']
+    };
+
+    const selectTurma = document.getElementById('turma');
+    const divQuesitos = document.getElementById('lista-quesitos');
+    const btnEnviar = document.getElementById('btn-enviar');
+    const form = document.getElementById('pesquisaForm');
+
+    // Carregar Turmas
+    Object.keys(configPesquisa.turmasEProfessores).forEach(turma => {
+        let option = document.createElement('option');
+        option.value = turma;
+        option.textContent = turma;
+        selectTurma.appendChild(option);
+    });
+
+    // Gerar Interface
+    selectTurma.addEventListener('change', function() {
+        const turmaEscolhida = this.value;
+        divQuesitos.innerHTML = ''; 
+        if (!turmaEscolhida) { btnEnviar.style.display = 'none'; return; }
+
+        configPesquisa.quesitos.forEach((quesito, iQ) => {
+            let cor = configPesquisa.paletaCores[iQ % configPesquisa.paletaCores.length];
+            let html = `<details class="quesito-card" style="--cor-tema:${cor}"><summary style="background-color:${cor}">${quesito}</summary><div class="detalhes-conteudo">`;
+            
+            configPesquisa.turmasEProfessores[turmaEscolhida].forEach((prof, iP) => {
+                let nomeGrupo = `q${iQ}_p${iP}`;
+                html += `<div class="professor-linha"><div class="professor-nome">${prof}</div><div class="opcoes-linha">`;
+                configPesquisa.opcoesNota.forEach(opt => {
+                    let id = `opt_${nomeGrupo}_${opt.valor}`;
+                    html += `<div class="opcao-wrapper"><input type="radio" id="${id}" name="${nomeGrupo}" class="nota-radio" data-prof="${prof}" data-quesito="${quesito}" value="${opt.valor}" required><label for="${id}" class="opcao-label">${opt.rotulo}</label></div>`;
+                });
+                html += `</div></div>`;
+            });
+            html += `</div></details>`;
+            divQuesitos.innerHTML += html;
+        });
+        btnEnviar.style.display = 'block';
+    });
+
+    // Ação ao Enviar - VERSÃO CORRIGIDA
+    form.addEventListener('submit', function(e) {
+        // 1. Impedimos o envio imediato para garantir o download
+        e.preventDefault(); 
+
+        let resultado = {
+            turma: selectTurma.value,
+            data: new Date().toLocaleString('pt-BR'),
+            avaliacoes: []
+        };
+
+        let agrupado = {};
+        document.querySelectorAll('.nota-radio:checked').forEach(c => {
+            let p = c.dataset.prof;
+            if (!agrupado[p]) agrupado[p] = {};
+            agrupado[p][c.dataset.quesito] = Number(c.value);
+        });
+
+        for (let p in agrupado) {
+            resultado.avaliacoes.push({ professor: p, notas: agrupado[p] });
+        }
+
+        const jsonStr = JSON.stringify(resultado, null, 4);
+        document.getElementById('jsonOutput').value = jsonStr;
+
+        // --- FUNÇÃO DE DOWNLOAD ---
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `avaliacao_${selectTurma.value.replace(/\s/g, '_')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        // --- MENSAGEM DE SUCESSO E ENVIO REAL ---
+        alert("Avaliação concluída!\n\n1. O arquivo de resposta foi baixado.\n2. Agora o formulário será enviado por e-mail.");
+        
+        // Agora enviamos o formulário programaticamente
+        // Isso ajuda o FormSubmit a entender a transição
+        form.submit(); 
+    });
+</script>
+</body>
+</html>
